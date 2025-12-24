@@ -329,7 +329,7 @@ When the puzzle is solved, you’ll see a confirmation message.</p>
       if(isSolved()) shuffle();
 
       moves = 0;
-      movesEl.textContent = `Ruchy: ${moves}`;
+      movesEl.textContent = `Moves: ${moves}`;
       overlay.classList.remove("show");
       render();
     }
@@ -343,7 +343,7 @@ When the puzzle is solved, you’ll see a confirmation message.</p>
       const b = order.indexOf(bId);
       [order[a], order[b]] = [order[b], order[a]];
       moves++;
-      movesEl.textContent = `Ruchy: ${moves}`;
+      movesEl.textContent = `Moves: ${moves}`;
       render();
 
       if(isSolved()){
