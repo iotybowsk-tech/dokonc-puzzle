@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solve the puzzle 🧩</title>
+  <style>
+    :root{
+      --max: 420px;
+      --gap: 6px;
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(0,0,0,.10);
+      --shadow2: 0 16px 40px rgba(0,0,0,.18);
+      --bg: #0b0b0d;
+      --card: rgba(255,255,255,.08);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.70);
+      --btn: rgba(255,255,255,.14);
+      --btnHover: rgba(255,255,255,.20);
+      --accent: rgba(255,255,255,.92);
+      --ok: rgba(87, 255, 160, .90);
+    }
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      min-height:100dvh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(255,255,255,.10), transparent 60%),
+                  radial-gradient(900px 600px at 90% 30%, rgba(255,255,255,.08), transparent 55%),
+                  linear-gradient(180deg, #0b0b0d, #07070a);
+      color: var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+    }
+    .wrap{
+      width: 100%;
+      max-width: calc(var(--max) + 40px);
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+      align-items:center;
+    }
+    .card{
+      width:100%;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    header{
+      width:100%;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+    }
+    h1{
+      font-size: 18px;
+      margin: 0 0 4px 0;
+      letter-spacing: .2px;
+    }
+    .sub{
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .controls{
+      display:flex;
+      gap: 8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.14);
+      background: var(--btn);
+      color: var(--text);
+      padding: 9px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .08s ease, background .15s ease;
+    }
+    .btn:active{ transform: scale(.98); }
+    .btn:hover{ background: var(--btnHover); }
+    .btn.primary{
+      border-color: rgba(255,255,255,.18);
+      background: rgba(255,255,255,.18);
+    }
+    .pill{
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.10);
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    /* Board */
+    .boardWrap{
+      width:100%;
+      display:flex;
+      justify-content:center;
+    }
+    .board{
+      width: min(90vw, var(--max));
+      aspect-ratio: 1 / 1;
+      border-radius: calc(var(--radius) + 6px);
+      padding: var(--gap);
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: var(--shadow);
+      display:grid;
+      gap: var(--gap);
+      touch-action: none; /* critical for pointer drag on mobile */
+      position: relative;
+    }
+    .tile{
+      border-radius: 12px;
+      background-image: url("image.jpg");
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 8px 20px rgba(0,0,0,.25);
+      cursor: grab;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      position: relative;
+      overflow:hidden;
+      transform: translateZ(0);
+    }
+    .tile:active{ cursor: grabbing; }
+    .tile::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), transparent 40%, rgba(0,0,0,.10));
+      opacity:.45;
+      pointer-events:none;
+    }
+    .tile.dragging{
+      z-index: 50;
+      transform: scale(1.04);
+      box-shadow: var(--shadow2);
+      border-color: rgba(255,255,255,.22);
+    }
+    .tile.target{
+      outline: 2px solid rgba(255,255,255,.55);
+      outline-offset: 2px;
+    }
+
+    /* Solve overlay */
+    .overlay{
+      position: fixed;
+      inset: 0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      background: rgba(0,0,0,.62);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+    }
+    .overlay.show{ display:flex; }
+    .modal{
+      width: min(92vw, 520px);
+      border-radius: 18px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: var(--shadow2);
+      padding: 16px;
+      text-align:left;
+    }
+    .modal h2{ margin: 0 0 6px 0; font-size: 18px; }
+    .modal p{ margin: 0 0 12px 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .modal .row{
+      display:flex; gap: 10px; flex-wrap:wrap;
+    }
+    a.btnLink{
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .ok{
+      color: var(--ok);
+      font-weight: 600;
+    }
+
+    /* Tiny footer */
+    .foot{
+      width:100%;
+      text-align:center;
+      color: rgba(255,255,255,.55);
+      font-size: 12px;
+      padding-bottom: 2px;
+      user-select:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <header>
+        <div>
+          <h1>Solve the puzzle 🧩</h1>
+          <p class="sub">Drag one tile onto another to swap their positions.
+When the puzzle is solved, you’ll see a confirmation message.</p>
+        </div>
+        <div class="controls">
+          <span class="pill" id="moves">Moves: 0</span>
+          <button class="btn" id="diff">Difficulty: 3×3</button>
+          <button class="btn primary" id="shuffle">Shuffle</button>
+        </div>
+      </header>
+    </div>
+
+    <div class="boardWrap">
+      <div class="board" id="board" aria-label="Puzzle"></div>
+    </div>
+
+    <div class="foot">Tip: if a tile doesn’t respond, release it and try grabbing it closer to the center.</div>
+  </div>
+
+  <!-- Solve modal -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2><span class="ok">Puzzle solved!</span> 🎭</h2>
+      <p>
+        Since you’re a true puzzle master, your special certificate is waiting for you.
+        <br/>You can keep it for yourself or share it with someone you’d like to go with.
+      </p>
+      <div class="row">
+        <a class="btn btnLink primary" href="certificate.pdf" download>Click below to download it.</a>
+        <button class="btn" id="close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== Settings you may want to change ======
+    const IMAGE_URL = "image.jpg";   // your photo
+    const PDF_URL   = "certificate.pdf";  // tickets
+    // ===========================================
+
+    const board = document.getElementById("board");
+    const movesEl = document.getElementById("moves");
+    const shuffleBtn = document.getElementById("shuffle");
+    const diffBtn = document.getElementById("diff");
+    const overlay = document.getElementById("overlay");
+    const closeBtn = document.getElementById("close");
+
+    // Ensure link is correct
+    document.querySelector('a[href="certificate.pdf"]').setAttribute("href", PDF_URL);
+
+    let size = 3;              // 3x3 default
+    let order = [];            // current tile ids in grid order
+    let moves = 0;
+
+    // Drag state
+    let draggingId = null;
+    let startX = 0, startY = 0;
+    let pointerId = null;
+
+    function setGridColumns(n){
+      board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    }
+
+    function buildTiles(n){
+      board.innerHTML = "";
+      setGridColumns(n);
+
+      // Build solved order [0..n*n-1]
+      order = Array.from({length: n*n}, (_, i) => i);
+
+      for(let id=0; id<n*n; id++){
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.dataset.id = id;
+
+        // Background: show cropped piece
+        const x = id % n;
+        const y = Math.floor(id / n);
+        tile.style.backgroundImage = `url("${IMAGE_URL}")`;
+        tile.style.backgroundSize = `${n*100}% ${n*100}%`;
+        tile.style.backgroundPosition = `${(x/(n-1))*100}% ${(y/(n-1))*100}%`;
+
+        // Pointer drag handlers
+        tile.addEventListener("pointerdown", onPointerDown, {passive:false});
+        tile.addEventListener("pointerenter", onPointerEnter, {passive:true});
+        tile.addEventListener("pointerleave", onPointerLeave, {passive:true});
+
+        board.appendChild(tile);
+      }
+
+      // board pointer move/up
+      board.addEventListener("pointermove", onPointerMove, {passive:false});
+      board.addEventListener("pointerup", onPointerUp, {passive:true});
+      board.addEventListener("pointercancel", onPointerUp, {passive:true});
+    }
+
+    function render(){
+      // Apply order -> CSS order
+      const tiles = Array.from(board.children);
+      tiles.forEach(tile => {
+        const id = Number(tile.dataset.id);
+        const pos = order.indexOf(id);
+        tile.style.order = pos;
+        tile.style.transform = ""; // reset transform after drag
+      });
+    }
+
+    function shuffle(){
+      // Shuffle but avoid trivial solved state
+      for(let i = order.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      if(isSolved()) shuffle();
+
+      moves = 0;
+      movesEl.textContent = `Ruchy: ${moves}`;
+      overlay.classList.remove("show");
+      render();
+    }
+
+    function isSolved(){
+      return order.every((id, idx) => id === idx);
+    }
+
+    function swapByIds(aId, bId){
+      const a = order.indexOf(aId);
+      const b = order.indexOf(bId);
+      [order[a], order[b]] = [order[b], order[a]];
+      moves++;
+      movesEl.textContent = `Ruchy: ${moves}`;
+      render();
+
+      if(isSolved()){
+        // tiny haptic on supported phones
+        if (navigator.vibrate) navigator.vibrate(30);
+        setTimeout(() => overlay.classList.add("show"), 120);
+      }
+    }
+
+    // --- Drag UX: drag one tile, drop onto another -> swap ---
+    function onPointerDown(e){
+      // Only left click / primary touch
+      e.preventDefault();
+      const tile = e.currentTarget;
+
+      pointerId = e.pointerId;
+      tile.setPointerCapture(pointerId);
+
+      draggingId = Number(tile.dataset.id);
+      startX = e.clientX;
+      startY = e.clientY;
+
+      tile.classList.add("dragging");
+    }
+
+    function onPointerMove(e){
+      if(draggingId === null || e.pointerId !== pointerId) return;
+      e.preventDefault();
+
+      const tile = getTileById(draggingId);
+      if(!tile) return;
+
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      // Move visually with finger for "feels right"
+      tile.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+    }
+
+    function onPointerUp(e){
+      if(draggingId === null || e.pointerId !== pointerId) return;
+
+      const dragged = getTileById(draggingId);
+      if(dragged){
+        dragged.classList.remove("dragging");
+        dragged.style.transform = "";
+      }
+
+      // Identify drop target under finger
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const targetTile = el?.closest?.(".tile");
+
+      // Clear target outlines
+      clearTargets();
+
+      if(targetTile){
+        const targetId = Number(targetTile.dataset.id);
+        if(targetId !== draggingId){
+          swapByIds(draggingId, targetId);
+        }
+      }
+
+      draggingId = null;
+      pointerId = null;
+    }
+
+    function onPointerEnter(e){
+      if(draggingId === null) return;
+      const tile = e.currentTarget;
+      const id = Number(tile.dataset.id);
+      if(id === draggingId) return;
+
+      // Highlight possible swap target
+      tile.classList.add("target");
+    }
+
+    function onPointerLeave(e){
+      e.currentTarget.classList.remove("target");
+    }
+
+    function clearTargets(){
+      board.querySelectorAll(".tile.target").forEach(t => t.classList.remove("target"));
+    }
+
+    function getTileById(id){
+      return board.querySelector(`.tile[data-id="${id}"]`);
+    }
+
+    // Difficulty toggle: 3x3 <-> 4x4 (still phone-friendly)
+    diffBtn.addEventListener("click", () => {
+      size = (size === 3) ? 4 : 3;
+      diffBtn.textContent = `Poziom: ${size}×${size}`;
+      buildTiles(size);
+      shuffle();
+    });
+
+    shuffleBtn.addEventListener("click", shuffle);
+
+    closeBtn.addEventListener("click", () => overlay.classList.remove("show"));
+    overlay.addEventListener("click", (e) => { if(e.target === overlay) overlay.classList.remove("show"); });
+
+    // Init
+    buildTiles(size);
+    shuffle();
+  </script>
+</body>
+</html>
